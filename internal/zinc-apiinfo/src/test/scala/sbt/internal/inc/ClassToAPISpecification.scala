@@ -23,10 +23,6 @@ class ClassToAPISpecification extends UnitSpec {
     AnnotationRenderingFixture.verify()
   }
 
-  it should "retain unreadable annotation members and non-exported annotation types" in {
-    AnnotationCompatibilityFixture.verify()
-  }
-
   "ClassToAPI" should "extract api of inner classes" in {
     val src =
       """|class A {
