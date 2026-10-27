@@ -19,6 +19,10 @@ import xsbti.api.{ ClassLike, ClassLikeDef, DefinitionType }
 
 class ClassToAPISpecification extends UnitSpec {
 
+  "ClassToAPI annotations" should "preserve typed values independently of rendered member order" in {
+    AnnotationRenderingFixture.verify()
+  }
+
   "ClassToAPI" should "extract api of inner classes" in {
     val src =
       """|class A {
