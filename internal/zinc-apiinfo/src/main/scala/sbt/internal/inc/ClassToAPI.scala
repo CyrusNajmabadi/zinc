@@ -517,10 +517,38 @@ object ClassToAPI {
   // Annotation.toString inherits reflection's unspecified member order.
   private def annotationString(a: Annotation): String = {
     val members = a.annotationType.getDeclaredMethods.sortBy(_.getName).map { method =>
-      if (!Modifier.isPublic(method.getDeclaringClass.getModifiers)) method.setAccessible(true)
-      method.getName + "=" + annotationValue(method.invoke(a))
+      method.getName + "=" + annotationMember(a, method)
     }
     "@" + a.annotationType.getName + members.mkString("(", ", ", ")")
+  }
+
+  private def annotationMember(a: Annotation, method: Method): String = {
+    try {
+      val value =
+        if (Proxy.isProxyClass(a.getClass))
+          Proxy.getInvocationHandler(a).invoke(a, method, null)
+        else {
+          if (!Modifier.isPublic(method.getDeclaringClass.getModifiers)) method.setAccessible(true)
+          method.invoke(a)
+        }
+      annotationValue(value)
+    } catch {
+      case e: InvocationTargetException => annotationFailure(e.getCause)
+      case e @ (_: TypeNotPresentException | _: EnumConstantNotPresentException |
+          _: java.lang.annotation.AnnotationTypeMismatchException |
+          _: java.lang.annotation.IncompleteAnnotationException) => annotationFailure(e)
+    }
+  }
+
+  private def annotationFailure(failure: Throwable): String = failure match {
+    case e: TypeNotPresentException => "missing type:" + e.typeName()
+    case e: EnumConstantNotPresentException =>
+      "missing enum:" + e.enumType().getName + ":" + e.constantName()
+    case e: java.lang.annotation.AnnotationTypeMismatchException =>
+      "type mismatch:" + e.element().getName + ":" + e.foundType()
+    case e: java.lang.annotation.IncompleteAnnotationException =>
+      "missing member:" + e.annotationType().getName + ":" + e.elementName()
+    case other => throw other
   }
 
   private def annotationValue(value: Any): String = value match {
