@@ -68,7 +68,10 @@ class ExtractAPI[GlobalType <: Global](
   // this cache reduces duplicate work both here and when persisting
   //   caches on other structures had minimal effect on time and cache size
   //   (tried: Definition, Modifier, Path, Id, String)
-  private[this] val typeCache = perRunCaches.newMap[(Symbol, Type), xsbti.api.Type]()
+  private[this] val typeCache = perRunCaches.newMap[
+    (Symbol, Type, (Int, scala.collection.immutable.Map[Symbol, String])),
+    xsbti.api.Type
+  ]()
   // these caches are necessary for correctness
   private[this] val structureCache = perRunCaches.newMap[Symbol, xsbti.api.Structure]()
   private[this] val classLikeCache =
@@ -151,6 +154,9 @@ class ExtractAPI[GlobalType <: Global](
           renameTo(tv) = newName
       }
     }
+    // Type conversion depends on the active existential binders, not just the compiler type.
+    def cacheContext: (Int, scala.collection.immutable.Map[Symbol, String]) =
+      (nestingLevel, renameTo.toMap)
     def renaming(symbol: Symbol): Option[String] = renameTo.get(symbol)
   }
 
@@ -565,7 +571,7 @@ class ExtractAPI[GlobalType <: Global](
   }
 
   private def processType(in: Symbol, t: Type): xsbti.api.Type =
-    typeCache.getOrElseUpdate((in, t), makeType(in, t))
+    typeCache.getOrElseUpdate((in, t, existentialRenamings.cacheContext), makeType(in, t))
   private def makeType(in: Symbol, t: Type): xsbti.api.Type = {
 
     val dealiased = t match {
