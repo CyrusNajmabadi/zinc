@@ -75,6 +75,13 @@ class ClassToAPISpecification extends UnitSpec {
     }
   }
 
+  it should "preserve the annotation proxy description for unresolved class and enum members" in {
+    Seq(false, true).foreach { enumValue =>
+      val annotation = AnnotationValues.unresolved(enumValue)
+      assert(ClassToAPI.annotation(annotation).arguments()(0).value() == annotation.toString)
+    }
+  }
+
   /**
    * Compiles given source code using Java compiler and returns API representation
    * extracted by ClassToAPI class.

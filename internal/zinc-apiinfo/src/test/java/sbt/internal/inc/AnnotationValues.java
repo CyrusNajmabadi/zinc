@@ -46,4 +46,18 @@ public class AnnotationValues {
 
     @Values(strings = {"a", "b"})
     public static class Multiple {}
+
+    public static Annotation unresolved(boolean enumValue) {
+        return (Annotation) java.lang.reflect.Proxy.newProxyInstance(
+            AnnotationValues.class.getClassLoader(), new Class<?>[] {Values.class},
+            (proxy, method, args) -> {
+                if (method.getName().equals("annotationType")) return Values.class;
+                if (method.getName().equals("toString")) return "@Values(missing)";
+                if (enumValue && method.getName().equals("choice"))
+                    throw new EnumConstantNotPresentException(Choice.class, "MISSING");
+                if (!enumValue && method.getName().equals("type"))
+                    throw new TypeNotPresentException("Missing", null);
+                return method.getDefaultValue();
+            });
+    }
 }

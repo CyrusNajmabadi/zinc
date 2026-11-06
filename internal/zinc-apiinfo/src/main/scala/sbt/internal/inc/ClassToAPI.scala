@@ -16,6 +16,7 @@ package inc
 import java.lang.reflect.{ Array => _, _ }
 import java.lang.annotation.Annotation
 import annotation.tailrec
+import scala.util.control.NonFatal
 import inc.classfile.ClassFile
 import xsbti.api
 import xsbti.api.SafeLazyProxy
@@ -515,11 +516,14 @@ object ClassToAPI {
     api.Annotation.of(reference(a.annotationType), Array(javaAnnotation(annotationString(a))))
 
   // Annotation.toString inherits reflection's unspecified member order.
-  private def annotationString(a: Annotation): String = {
+  private def annotationString(a: Annotation): String = try {
     val members = a.annotationType.getDeclaredMethods.sortBy(_.getName).map { method =>
       "(member " + quoted(method.getName) + " " + annotationMember(a, method) + ")"
     }
     "(annotation " + quoted(a.annotationType.getName) + members.mkString(" ", " ", ")")
+  } catch {
+    // Annotation proxies can describe missing classes or enum constants without resolving them.
+    case NonFatal(_) => a.toString
   }
 
   private def annotationMember(a: Annotation, method: Method): String = {
