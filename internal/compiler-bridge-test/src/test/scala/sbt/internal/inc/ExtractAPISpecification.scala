@@ -17,7 +17,7 @@ class ExtractAPISpecification
 
   "ExtractAPI" should "give stable names to members of existential types in method signatures" in stableExistentialNames()
 
-  it should "cache type conversions within their existential scope" in {
+  it should "avoid reusing type conversions across existential scopes" in {
     val settings = new Settings
     settings.usejavacp.value = true
     settings.outputDirs.setSingleOutput(new VirtualDirectory("(memory)", None))
@@ -53,7 +53,7 @@ class ExtractAPISpecification
     enter.invoke(renamings, variables)
     val first = converted()
     assert(binder(first) == "existential_1_0")
-    assert(converted() eq first)
+    assert(binder(converted()) == "existential_1_0")
     leave.invoke(renamings, variables)
 
     enter.invoke(renamings, List.empty[global.Symbol])
@@ -67,8 +67,12 @@ class ExtractAPISpecification
     leave.invoke(renamings, in :: variables)
 
     enter.invoke(renamings, variables)
-    assert(converted() eq first)
+    assert(binder(converted()) == "existential_1_0")
     leave.invoke(renamings, variables)
+
+    val plain = global.definitions.StringTpe
+    val cached = process.invoke(extractor, in, plain)
+    assert(process.invoke(extractor, in, plain) eq cached)
   }
 
   it should "extract children of a sealed class" in {
