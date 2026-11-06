@@ -82,6 +82,12 @@ class ClassToAPISpecification extends UnitSpec {
     }
   }
 
+  it should "ignore static instrumentation methods on annotation types" in {
+    val value = ClassToAPI.annotation(AnnotationValues.instrumented()).arguments()(0).value()
+    assert(value.contains("(member \"value\" (string \"member\"))"))
+    assert(!value.contains("jacoco"))
+  }
+
   /**
    * Compiles given source code using Java compiler and returns API representation
    * extracted by ClassToAPI class.

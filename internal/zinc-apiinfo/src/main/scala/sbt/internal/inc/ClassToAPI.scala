@@ -517,7 +517,10 @@ object ClassToAPI {
 
   // Annotation.toString inherits reflection's unspecified member order.
   private def annotationString(a: Annotation): String = try {
-    val members = a.annotationType.getDeclaredMethods.sortBy(_.getName).map { method =>
+    val members = a.annotationType.getDeclaredMethods.filter { method =>
+      Modifier.isPublic(method.getModifiers) && Modifier.isAbstract(method.getModifiers) &&
+      !method.isSynthetic && method.getParameterCount == 0
+    }.sortBy(_.getName).map { method =>
       "(member " + quoted(method.getName) + " " + annotationMember(a, method) + ")"
     }
     "(annotation " + quoted(a.annotationType.getName) + members.mkString(" ", " ", ")")

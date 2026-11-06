@@ -60,4 +60,19 @@ public class AnnotationValues {
                 return method.getDefaultValue();
             });
     }
+
+    public interface Instrumented extends Annotation {
+        String value();
+        static boolean[] $jacocoInit() { throw new AssertionError("Not an annotation member"); }
+    }
+
+    public static Annotation instrumented() {
+        return (Annotation) java.lang.reflect.Proxy.newProxyInstance(
+            AnnotationValues.class.getClassLoader(), new Class<?>[] {Instrumented.class},
+            (proxy, method, args) -> {
+                if (method.getName().equals("annotationType")) return Instrumented.class;
+                if (method.getName().equals("value")) return "member";
+                throw new AssertionError("Unexpected member: " + method);
+            });
+    }
 }
