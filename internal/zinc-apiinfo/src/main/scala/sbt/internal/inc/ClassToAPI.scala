@@ -516,18 +516,19 @@ object ClassToAPI {
     api.Annotation.of(reference(a.annotationType), Array(javaAnnotation(annotationString(a))))
 
   // Annotation.toString inherits reflection's unspecified member order.
-  private def annotationString(a: Annotation): String = try {
-    val members = a.annotationType.getDeclaredMethods.filter { method =>
-      Modifier.isPublic(method.getModifiers) && Modifier.isAbstract(method.getModifiers) &&
-      !method.isSynthetic && method.getParameterCount == 0
-    }.sortBy(_.getName).map { method =>
-      "(member " + quoted(method.getName) + " " + annotationMember(a, method) + ")"
+  private def annotationString(a: Annotation): String =
+    try {
+      val members = a.annotationType.getDeclaredMethods.filter { method =>
+        Modifier.isPublic(method.getModifiers) && Modifier.isAbstract(method.getModifiers) &&
+        !method.isSynthetic && method.getParameterCount == 0
+      }.sortBy(_.getName).map { method =>
+        "(member " + quoted(method.getName) + " " + annotationMember(a, method) + ")"
+      }
+      "(annotation " + quoted(a.annotationType.getName) + members.mkString(" ", " ", ")")
+    } catch {
+      // Annotation proxies can describe missing classes or enum constants without resolving them.
+      case NonFatal(_) => a.toString
     }
-    "(annotation " + quoted(a.annotationType.getName) + members.mkString(" ", " ", ")")
-  } catch {
-    // Annotation proxies can describe missing classes or enum constants without resolving them.
-    case NonFatal(_) => a.toString
-  }
 
   private def annotationMember(a: Annotation, method: Method): String = {
     val value =
@@ -542,15 +543,15 @@ object ClassToAPI {
 
   private def quoted(value: String): String =
     "\"" + value.flatMap {
-      case '\\' => "\\\\"
-      case '"' => "\\\""
+      case '\\'                           => "\\\\"
+      case '"'                            => "\\\""
       case c if Character.isISOControl(c) => f"\\u${c.toInt}%04x"
-      case c => c.toString
+      case c                              => c.toString
     } + "\""
 
   private def annotationValue(value: Any): String = value match {
-    case s: String => "(string " + quoted(s) + ")"
-    case c: Char => "(char " + quoted(c.toString) + ")"
+    case s: String   => "(string " + quoted(s) + ")"
+    case c: Char     => "(char " + quoted(c.toString) + ")"
     case c: Class[?] => "(class " + quoted(c.getName) + ")"
     case e: Enum[?] => "(enum " + quoted(e.getDeclaringClass.getName) + " " + quoted(e.name()) + ")"
     case a: Annotation => annotationString(a)
