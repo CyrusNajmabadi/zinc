@@ -517,9 +517,9 @@ object ClassToAPI {
   // Annotation.toString inherits reflection's unspecified member order.
   private def annotationString(a: Annotation): String = {
     val members = a.annotationType.getDeclaredMethods.sortBy(_.getName).map { method =>
-      method.getName + "=" + annotationMember(a, method)
+      "(member " + quoted(method.getName) + " " + annotationMember(a, method) + ")"
     }
-    "@" + a.annotationType.getName + members.mkString("(", ", ", ")")
+    "(annotation " + quoted(a.annotationType.getName) + members.mkString(" ", " ", ")")
   }
 
   private def annotationMember(a: Annotation, method: Method): String = {
@@ -533,13 +533,25 @@ object ClassToAPI {
     annotationValue(value)
   }
 
+  private def quoted(value: String): String =
+    "\"" + value.flatMap {
+      case '\\' => "\\\\"
+      case '"' => "\\\""
+      case c if Character.isISOControl(c) => f"\\u${c.toInt}%04x"
+      case c => c.toString
+    } + "\""
+
   private def annotationValue(value: Any): String = value match {
+    case s: String => "(string " + quoted(s) + ")"
+    case c: Char => "(char " + quoted(c.toString) + ")"
+    case c: Class[?] => "(class " + quoted(c.getName) + ")"
+    case e: Enum[?] => "(enum " + quoted(e.getDeclaringClass.getName) + " " + quoted(e.name()) + ")"
     case a: Annotation => annotationString(a)
     case other if other.getClass.isArray =>
       (0 until java.lang.reflect.Array.getLength(other)).map { index =>
         annotationValue(java.lang.reflect.Array.get(other, index))
-      }.mkString("{", ",", "}")
-    case other => other.toString
+      }.mkString("(array ", " ", ")")
+    case other => "(" + other.getClass.getName + " " + other.toString + ")"
   }
 
   /**
